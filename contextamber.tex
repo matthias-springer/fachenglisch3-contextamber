@@ -1,0 +1,73 @@
+\documentclass{sig-alternate}
+
+\begin{document}
+%
+% --- Author Metadata here ---
+%\conferenceinfo{WOODSTOCK}{'97 El Paso, Texas USA}
+%\CopyrightYear{2007} % Allows default copyright year (20XX) to be over-ridden - IF NEED BE.
+%\crdata{0-12345-67-8/90/01}  % Allows default copyright data (0-89791-88-6/97/05) to be over-ridden - IF NEED BE.
+% --- End of Author Metadata ---
+
+\title{ContextAmber: Context-oriented Programming in Amber~Smalltalk}
+
+\numberofauthors{1} %  in this sample file, there are a *total*
+\author{
+\alignauthor
+Matthias Springer\\
+       \affaddr{Hasso Plattner Institute, Software Architecture Group}\\
+       \email{matthias.springer@student.hpi.uni-potsdam.de}
+}
+
+\date{\today}
+% Just remember to make sure that the TOTAL number of authors
+% is the number that will appear on the first page PLUS the
+% number that will appear in the \additionalauthors section.
+
+\maketitle
+\begin{abstract}
+Amber Smalltalk is an implementation of the Smalltalk programming language in JavaScript. It consists of a Smalltalk-to-JavaScript compiler, an IDE running in a web browser, and an optional NodeJS-based backend for saving changed source code files to the disk. Context-oriented programming is a tool for modularizing cross-cutting concerns in object-oriented programming languages. We present ContextAmber, a framework for context-oriented programming that is integrated in Amber Smalltalk and itself written in Amber Smalltalk.
+
+ContextAmber hooks into the Smalltalk compiler, which is also written in Amber Smalltalk, and adds a decorator method that checks the current layer composition and executes partial methods. It also optimizes partial method execution by inlining them into a single method if the layer composition does not change for some time.
+
+As a running example, we show how we implemented a simple method profiler that evaluates method calls following a certain pattern. We can use the profiler to measure the running time of Smalltalk methods, as well as to analyze method parameters. By doing this, we can gather valuable information for program optimization.
+\end{abstract}
+
+% A category with the (minimum) three required fields
+%\category{H.4}{Information Systems Applications}{Miscellaneous}
+%A category including the fourth, optional field follows...
+%\category{D.2.8}{Software Engineering}{Metrics}[complexity measures, performance measures]
+
+%\terms{Theory}
+
+%\keywords{ACM proceedings, \LaTeX, text tagging}
+
+\section{INTRODUCTION}
+Modern web applications depend highly on the usage of JavaScript. Since the JavaScript programming language itself is pretty limited and hard to use, web developers soon started to write frameworks and libraries for JavaScript (e.g., jQuery or AngularJS). These libraries fulfill different purposes, but they all focus on making it easier to write JavaScript applications. Amber Smalltalk uses a different approach: it allows the programmer to write his code in the more structured and class-oriented programming Smalltalk.
+
+In this work, we present ContextAmber, a framework for context-oriented programming, that allows the programmer to modularize heterogeneous crosscutting concerns. A concern is crosscutting, if parts of its implementation are scattered accross different modules of the program. A crosscutting concern is heterogeneous if its implementation requires different behavior for every module where it leaks through. The most important concepts of context-oriented programming are partial method definitions, layers, and dynamic layer activation.
+
+\paragraph{Partial Method Definitons}
+In context-oriented programming, the behavior of base methods is extended by partial methods. A partial method overrides a certain base method and, therefore, replaces its original behavior. It can still \emph{proceed} to the original base method at any point. Partial methods are similar to around advice in aspect-oriented programming.
+
+\section{RELATED WORK}
+Talk about ContextJS and ContextS.
+
+\section{AMBER SMALLTALK'S OBJECT MODEL}
+
+Talk about how the Smalltalk object model is mapped to JavaScript.
+
+\section{JAVASCRIPT-TO-SMALLTALK COMPILATION}
+Talk about how Amber Smalltalk's compiler works.
+
+\section{OUR IMPLEMENTATION}
+This is the main section and will be renamed later (once I have figured out how to implement ContextAmber exactly).
+
+\section{PROFILING SMALLTALK METHODS}
+Talk about the Smalltalk method profiler.
+
+\section{FUTURE WORK}
+Talk about what still needs to be done.
+
+\section{CONCLUSION}
+
+\end{document}
