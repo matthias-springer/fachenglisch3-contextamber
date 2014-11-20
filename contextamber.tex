@@ -1,5 +1,7 @@
 \documentclass{sig-alternate}
 
+\usepackage{multirow}
+
 \begin{document}
 %
 % --- Author Metadata here ---
@@ -93,23 +95,69 @@ In this section, we describe the main ideas of our implementation. We first pres
 \subsection{DATA STRUCTURE}
 In context-oriented programming, we modularize partial methods in layers. Every partial method belongs to exactly one base method in a specific class. In ContextAmber, a layer is an instance of a subclass of the class \texttt{Layer}. We consider several alternatives for associating partial methods with base classes.
 
-\paragraph{Class name prefix}
+\paragraph{Class Name Prefix}
 We create a class for every layer. The names of partial methods are a combination of the base class name and the base method name. Consider, for example, that we want to define a layer \texttt{RotationLayer} for the base method \texttt{Point>>x:}. The name of the partial method would be \texttt{RotationLayer>>Point\$x:}. The dollar sign has no meaning in Amber Smalltalk but is also not allowed in identifiers. Implementing this approach requires changing the grammar, such that the dollar sign is allowed in method names, and adding a check to the semantic analyzer that ensures that method names with a single dollar sign are allowed only in methods defined in a layer.
 
-\paragraph{Method protocols}
+\paragraph{Method Protocols}
 Instead of prefixing partial method names, the partial method's protocol is the name of the base class; however, this restricts us in categorizing partial methods in a meaningful way.
 
-\paragraph{Partial classes}
+\paragraph{Partial Classes}
 A layer definition consists of multiple classes. For every base class for which a partial method exists, there is a separate class containing all partial methods for that base class. We call these classes partial classes. In addition, there is a central layer class maintaining all layer-specific state and aggregating all partial classes for that layer. We use partial classes in ContextAmber, but other implementations typically use class name prefixes (e.g., JCop and ContextJS).
 
 \subsection{LAYER ACTIVATION}
+ContextAmber supports activating layers by default (also referred to as \emph{global} layer activation), object-wise layer activation, and scoped layer activation.
 
-\paragraph{Global layer activation}
-% Was wenn Layer global aktiv aber dann im Scope ausgeschaltet?
+\paragraph{Default Layer Activation State}
+A layer's default activation state defines whether a layer is activated or deactivated by default. Initially, all layers are deactivated by default. Object-wise and scoped layer activation can override a layer's default activation state; otherwise, the default activation state determines whether a layer is active or not. 
 
-\paragraph{Object-wise layer activation}
+Our implementation maintains a stack of layers that are activated by default. A layer is being activated by default by adding it to the stack. Similarly, it is being deactivated by default by removing it from the stack (if present). Activating an already active layer or deactivating an already deactivated layer has no effect. Note, that the order in which we change the default activation state for multiple layers affects their composition order.
+
+\paragraph{Object-wise Layer Activation}
+A layer can be activated or deactivated on a per-object basis. Object-wise layer activation overrides default layer activation. Consider, for example, that layer $L1$ is already activated by default. If we deactivate layer $L1$ for an object $o$, $L1$ will not be part of the current layer composition when sending a message to $o$.
+
+Every object maintains a single stack of layer activation and layer deactivation statements (denoted by \texttt{+layer} and \texttt{-layer}, respectively). We also support resetting a layer (denoted by \texttt{*layer}) which removes layer (de)activation statements from the stack. Resetting a layer means reverting its activation state to its default activation state, while deactivating a layer means turning off a layer for an object; even if it was activated both by default and for the current object. For example, let $D = (L1, L2, L3)$ be the default active layer stack and $O = (+L1, +L2, -L1, *L2, +L4)$ be the sequence of layer activation changes for an arbitrary object. Changing layers according to $O$ results in a layer (de)activation stack of $O' = (-L1, +L4)$. The resulting layer composition for $D$ and $O'$ is $(L2, L3, L4)$.
 
 \paragraph{Scoped layer activation}
+A layer can be activated or deactivated within a certain scope (i.e., within a block). Scoped layer activation overrides object-wise layer activation. Similar to object-wise layer activation, a layer can be activated, deactivated, and reset. Since JavaScript is single-threaded, it is sufficient to maintain a single stack of layer activation and deactivation statements for the current scope. This stack is modified before the block is executed, and reset to its original state after the block was executed.
+
+\paragraph{Interface}
+\begin{figure}[h]
+\centering
+\begin{tabular}{cc}
+\multirow{2}{*}{Default} & \texttt{Layer>>activate} \\
+ & \texttt{Layer>>deactivate} \\
+ \hline
+\multirow{3}{*}{Object-wise} & \texttt{Object>>activateLayer:} \\
+ & \texttt{Object>>deactivateLayer:} \\
+ & \texttt{Object>>resetLayer:} \\
+ \hline
+\multirow{3}{*}{Scoped} & \texttt{BlockClosure>>withLayer:} \\
+ & \texttt{BlockClosure>>withoutLayer:} \\
+ & \texttt{BlockClosure>>withResetLayer:} \\
+\end{tabular}
+\caption{Interface for activating, deactivating, and resetting layers.}
+\end{figure}
+
+\paragraph{Example}
+\begin{figure}[!htp]
+\centering
+\begin{tabular}{cccccc}
+\multicolumn{2}{c}{default} & \multicolumn{2}{c}{object-wise} & \multicolumn{2}{c}{scoped} \\
+instr. & stack & instr. & stack & instr. & stack \\
+\hline
+\texttt{+L1} & \texttt{+L4} & \texttt{+L1} & \texttt{-L2} & \texttt{-L1} & \texttt{+L2} \\
+\texttt{+L2} & \texttt{+L2} & \texttt{+L3} & \texttt{+L1} & \texttt{-L1} & \texttt{-L2} \\
+\texttt{-L1} &              & \texttt{+L2} &              & \texttt{*L1} & \texttt{-L4} \\
+\texttt{-L3} &              & \texttt{*L3} &              & \texttt{-L4} & \\
+\texttt{+L4} &              & \texttt{-L2} &              & \texttt{-L2} & \\
+             &              &              &              & \texttt{+L2} & \\
+\end{tabular}
+\begin{tabular}{cc}
+composed stack & \texttt{(+L2, +L4, +L1, -L2, -L4, -L2, +L2)} \\
+layer composition & \texttt{(L1, L2)} \\
+\end{tabular}
+\caption{Layer Activation Example}
+\end{figure}
 
 \section{PROFILING SMALLTALK METHODS}
 Talk about the Smalltalk method profiler.
