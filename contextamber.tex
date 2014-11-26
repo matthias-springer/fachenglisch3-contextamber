@@ -1,7 +1,22 @@
-\documentclass{sig-alternate}
-
+\documentclass[english,paper=a4,twocolumn=true,DIV=calc,fontsize=9pt]{scrartcl}
+\usepackage[utf8]{inputenx}
+\usepackage[main=english]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\usepackage{graphicx}
+\usepackage{fixltx2e}
+\usepackage{booktabs}
+\usepackage{sourcecodepro}
 \usepackage{multirow}
+\usepackage[activate]{microtype}
+\usepackage{hyperref}
 
+\addtokomafont{disposition}{\rmfamily}
+\addtokomafont{descriptionlabel}{\rmfamily}
+\addtokomafont{caption}{\small}
+\addtokomafont{captionlabel}{\bfseries}
+\setcapindent{1em}
+\usepackage{lmodern}
 \begin{document}
 %
 % --- Author Metadata here ---
@@ -12,18 +27,11 @@
 
 \title{ContextAmber: Context-oriented Programming in Amber~Smalltalk}
 
-\numberofauthors{1} %  in this sample file, there are a *total*
 \author{
-\alignauthor
 Matthias Springer\\
-       \affaddr{Hasso Plattner Institute, Software Architecture Group}\\
-       \email{matthias.springer@student.hpi.uni-potsdam.de}
+       {Hasso Plattner Institute, Software Architecture Group}\\
+       \url{matthias.springer@student.hpi.uni-potsdam.de}
 }
-
-\date{\today}
-% Just remember to make sure that the TOTAL number of authors
-% is the number that will appear on the first page PLUS the
-% number that will appear in the \additionalauthors section.
 
 \maketitle
 \begin{abstract}
@@ -44,7 +52,7 @@ As a running example, we show how to implement a simple method profiler that eva
 %\keywords{ACM proceedings, \LaTeX, text tagging}
 
 \section{INTRODUCTION}
-Modern web applications depend highly on the usage of JavaScript. Since the JavaScript programming language itself is pretty limited and hard to use, web developers soon started to write frameworks and libraries for JavaScript (e.g., jQuery or AngularJS). These libraries fulfill different purposes, but they all focus on making it easier to write JavaScript applications in JavaScript. Amber Smalltalk uses a different approach: it allows the programmer to write his code in the more structured and class-oriented programming language Smalltalk.
+Modern web applications depend highly on the usage of JavaScript. Since the JavaScript programming language is pretty limited and hard to use, web developers soon started to write frameworks and libraries for JavaScript (e.g., jQuery or AngularJS). These libraries fulfill different purposes, but they all focus on making it easier to write JavaScript applications in JavaScript. Amber Smalltalk uses a different approach: it allows the programmer to write his code in the more structured and class-oriented programming language Smalltalk.
 
 In this work, we present ContextAmber, a framework for context-oriented programming, that allows the programmer to modularize heterogeneous crosscutting concerns. A concern is crosscutting, if parts of its implementation are scattered across different modules of the program. A crosscutting concern is heterogeneous if its implementation requires different behavior for every module where it leaks through. The most important concepts of context-oriented programming are partial method definitions, layers, and dynamic layer activation.
 
@@ -58,20 +66,20 @@ A layer encapsulates a set of partial methods that belong together conceptually.
 Layers can be activated and deactivated, resulting in partial methods being called instead of their base methods or not. Layer activation is dynamic in a sense that we can turn layers on and off at runtime with designated methods calls or with expressions that are new to the programming language's syntax.
 
 \section{RELATED WORK}
-A variety of implementations for context-oriented programming with different features exists. JCop is an implementation for Java and supports declarative layer composition: instead of activating or deactivating layers explicitly, we specify a boolean expression which activates a layer automatically if it holds true. This fits nicely with the idea that the \emph{context} is anything that can be calcuated computationally, and that behavior changes automatically once the context changes.
+A variety of implementations exists for context-oriented programming with different features~\cite{Appeltauer:2009:CCP:1562112.1562118}. JCop is an implementation for Java~\cite{Schuster:2011:CPM:2068736.2068741} and supports declarative layer composition~\cite{appeltauer2012declarative}: instead of activating or deactivating layers explicitly, we specify a boolean expression which activates a layer automatically if it holds true. This fits nicely with the idea that the \emph{context} is anything that can be calcuated computationally, and that behavior changes automatically once the context changes.
 
-ContextJS is an implementation for JavaScript and integrated into the Lively Kernel. It supports layer activation and deactivation based on the composition of morphs, in addition to global layer activation, scoped layer activation, and object-wise layer activation.
+ContextJS~\cite{Lincke:2011:OIC:1998661.1998804} is an implementation for JavaScript and integrated into the Lively Kernel~\cite{Taivalsaari:2008:WBA:1698208}. It supports layer activation and deactivation based on the composition of morphs, in addition to global layer activation, scoped layer activation, and object-wise layer activation~\cite{10.1109/C5.2012.20}.
 
-Aspect-oriented programming is a way to modularize homogeneous crosscutting concerns. Partial methods are called pieces of \emph{advice} and modularized in \emph{aspects}. A special \emph{pointcut} notation defines with which base method a piece of advice will be executed. Typically, one piece of advice will be applied to multiple base methods, which is why aspect-oriented programming is suitable for homogeneous crosscutting concerns. Advice code can not only replace a base method (\emph{around} advice), but also be executed before or after the base method was executed. Aspect-oriented programming is a superset of context-oriented programming with the only limitation that most implementations for aspect-oriented programming are static (i.e., the programmer has to specify at compile time where pieces of advice should be applied).
+Aspect-oriented programming~\cite{Kiczales:2001:AP:503271.503260} is a way to modularize homogeneous crosscutting concerns~\cite{apel2006structure}. Partial methods are called pieces of \emph{advice} and modularized in \emph{aspects}. A special \emph{pointcut} notation defines with which base method a piece of advice will be executed. Typically, one piece of advice will be applied to multiple base methods, which is why aspect-oriented programming is suitable for homogeneous crosscutting concerns. Advice code can not only replace a base method (\emph{around} advice), but also be executed before or after the base method was executed. Aspect-oriented programming is a superset of context-oriented programming with the only limitation that most implementations for aspect-oriented programming are static (i.e., the programmer has to specify at compile time where pieces of advice should be applied).
 
 Context-oriented programming is less powerful than aspect-oriented programming, making it easier to reason about layers and layer composition.
 
 \section{AMBER'S OBJECT MODEL}
 Amber Smalltalk implements an object model that is similar to the Smalltalk-80 object model. Amber Smalltalk is purely object-oriented and every Smalltalk object is a JavaScript object at the same time; however, not every JavaScript object is a Smalltalk object in a sense that arbitrary JavaScript objects do not have Smalltalk instance variables or Smalltalk instance methods\footnote{See Section~? for details on Smalltalk-JavaScript integration.}. Smalltalk instance variables are stored as JavaScript properties with an \texttt{@} prefix. An object's instance methods are stored in its prototype object as properties but never in the object itself. They always begin with an \texttt{\_} prefix.
 
-\begin{figure}[h]
+\begin{figure}
 \centering
-\includegraphics[width=0.49\textwidth]{amber_class_model.pdf}
+\includegraphics[width=0.49\textwidth]{amber_class_model}
 \label{fig:amber_obj}
 \caption{Part of Amber's object model as seen from the JavaScript side. Inheritance arrows designate prototype chains. An association arrow between object \texttt{a} and object \texttt{b} means that \texttt{a.klass = b}.}
 \end{figure}
@@ -80,13 +88,13 @@ Figure~\ref{fig:amber_obj} shows a part of Amber Smalltalk's object model. As an
 
 
 \section{COMPILATION PROCESS}
-Amber Smalltalk compiles Smalltalk to JavaScript when a method is saved or a statement is executed in the workspace. In either case, the method \texttt{Compiler>>compile:} is called with the Smalltalk source code as an argument. It returns the JavaScript source code. The following list gives an overview of the compilation process.
+Amber Smalltalk compiles Smalltalk to JavaScript when a method is saved or a statement is executed in the workspace. In either case, the method \texttt{Compiler>>compile:} is called with the Smalltalk source code as an argument, and returns the JavaScript source code. The following list gives an overview of the compilation process.
 
 \begin{enumerate}
-    \item Smalltalk source code parsing. The parser is generated from a \emph{parsing expression grammar} using the PEG.js parser generator. The parser outputs an abstract syntax tree (AST).
-    \item Semantic analysis. Examples are checking if an identifier is defined (i.e., if a variable/class/argument/JavaScript variable with that name exists), or checking for variable shadowing which is not allowed in Smalltalk.
-    \item AST to Intermediate Representation (IR) conversion. This step involves inlining message sends for \texttt{ifTrue:}, \texttt{ifFalse:}, \texttt{ifTrue:ifFalse:}, and \texttt{ifNil:ifNotNil:}.
-    \item JavaScript code generation. JavaScript code is generated while traversing the IR tree.
+    \item Smalltalk source code parsing: the parser is generated from a \emph{parsing expression grammar} using the PEG.js parser generator. The parser outputs an abstract syntax tree (AST).
+    \item Semantic analysis: examples are checking if an identifier is defined (i.e., if a variable/class/argument/JavaScript variable with that name exists), or checking for variable shadowing which is not allowed in Smalltalk.
+    \item AST to Intermediate Representation (IR) conversion: this step involves inlining message sends for \texttt{ifTrue:}, \texttt{ifFalse:}, \texttt{ifTrue:ifFalse:}, and \texttt{ifNil:ifNotNil:}.
+    \item JavaScript code generation: JavaScript code is generated while traversing the IR tree.
 \end{enumerate}
 
 \section{OUR IMPLEMENTATION}
@@ -118,10 +126,11 @@ A layer can be activated or deactivated on a per-object basis. Object-wise layer
 Every object maintains a single stack of layer activation and layer deactivation statements (denoted by \texttt{+layer} and \texttt{-layer}, respectively). We also support resetting a layer (denoted by \texttt{*layer}) which removes layer (de)activation statements from the stack. Resetting a layer means reverting its activation state to its default activation state, while deactivating a layer means turning off a layer for an object; even if it was activated both by default and for the current object. For example, let $D = (L1, L2, L3)$ be the default active layer stack and $O = (+L1, +L2, -L1, *L2, +L4)$ be the sequence of layer activation changes for an arbitrary object. Changing layers according to $O$ results in a layer (de)activation stack of $O' = (-L1, +L4)$. The resulting layer composition for $D$ and $O'$ is $(L2, L3, L4)$.
 
 \paragraph{Scoped layer activation}
-A layer can be activated or deactivated within a certain scope (i.e., within a block). Scoped layer activation overrides object-wise layer activation. Similar to object-wise layer activation, a layer can be activated, deactivated, and reset. Since JavaScript is single-threaded, it is sufficient to maintain a single stack of layer activation and deactivation statements for the current scope. This stack is modified before the block is executed, and reset to its original state after the block was executed.
+A layer can be activated or deactivated within a certain scope (i.e., within a block). Scoped layer activation overrides object-wise layer activation. Similar to object-wise layer activation, a layer can be activated, deactivated, or reset. Since JavaScript is single-threaded, it is sufficient to maintain a single stack of layer activation and deactivation statements for the current scope. This stack is modified before the block is executed, and reset to its original state after the block was executed.
 
 \paragraph{Interface}
-\begin{figure}[h]
+The following table gives an overview of the ContextAmber API for activating and deactivating layers.
+\begin{table}[h]
 \centering
 \begin{tabular}{cc}
 \multirow{2}{*}{Default} & \texttt{Layer>>activate} \\
@@ -135,11 +144,11 @@ A layer can be activated or deactivated within a certain scope (i.e., within a b
  & \texttt{BlockClosure>>withoutLayer:} \\
  & \texttt{BlockClosure>>withResetLayer:} \\
 \end{tabular}
-\caption{Interface for activating, deactivating, and resetting layers.}
-\end{figure}
+\end{table}
 
 \paragraph{Example}
-\begin{figure}[!htp]
+The following table shows an example for calculating the layer composition when layers are activated by default, object-wise, and in the current scope.
+\begin{table}[h]
 \centering
 \begin{tabular}{cccccc}
 \multicolumn{2}{c}{default} & \multicolumn{2}{c}{object-wise} & \multicolumn{2}{c}{scoped} \\
@@ -156,8 +165,38 @@ instr. & stack & instr. & stack & instr. & stack \\
 composed stack & \texttt{(+L2, +L4, +L1, -L2, -L4, -L2, +L2)} \\
 layer composition & \texttt{(L1, L2)} \\
 \end{tabular}
-\caption{Layer Activation Example}
+\end{table}
+
+\subsection{IMPLEMENTATION DETAILS}
+(this is a stub)
+
+\paragraph{Wrapper Code Generation}
+For a partial method, ContextAmber generates a wrapper (decorator) method replacing the corresponding base method, whenever the partial method is created for the first time or the base method changes. In the latter case, the new base method overwrites the wrapper method; therefore, we have to reinstall the wrapper method.
+
+The wrapper method retrieves the current layer composition and invokes the corresponding partial method of the layer on top of the stack. The layer at the bottom of the stack is always the base class.
+
+\section{OPTIMIZATIONS}
+In this section, we present optimizations which speed up ContextAmber.
+
+\subsection{ASSUMPTIONS}
+Most of the otpimizations presented in this section are based on the assumption that method invocations are much more frequent than changes of the layer composition. Therefore, we try to speed up the execution of layered methods at the cost of reduced performance for layer composition changes.
+
+\subsection{INLINING PROCEED CALLS}
+Layer compositions with a high number of layers and \texttt{proceed} calls slow down method execution, because every \texttt{proceed} call is an additional message send and requires finding the next layer from the stack of active layers. We speed up this process by replacing message sends of \texttt{proceed} selectors with the list of instructions of the corresponding partial method for the next layer in the IR tree.
+
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=0.45\textwidth]{compiler_inline.pdf}
+    \label{fig:comp-inline}
+    \caption{ContextAmber's integration into Amber Smalltalk's compiler infrastructure}
 \end{figure}
+
+ContextAmber adds another IR visitor to Amber's existing compiler infrastructure. The \texttt{IRProceedInliner} class inlines all \texttt{proceed} message sends. If an inlined partial method contains another \texttt{proceed} call, we will inline that one as well. The algorithm for this optimization is simple: we generate the IR for the base method, for the lowest layer, for the next higher layer, and so on, until we reach the layer on top of the stack. Every time we encounter a \texttt{proceed} call, we can immediately replace the send node with the instruction node containing the next partial method. By induction, that instruction node has already all \texttt{proceed} calls inlined.
+
+\subsection{CACHING PARTIAL METHOD IR}
+Whenever \texttt{IRProceedInliner} inlines partial methods, it parses the Smalltalk code and generates an AST and IR for all layers in the current layer composition. However, in many cases only the upper part of the layer composition stack changes. Therefore, it is sufficient to recompile partial methods beginning with the layer that changed.
+
+In addition, we cache the unoptimized IR (i.e., without \texttt{proceed} inlining) for all partial methods, such that we only have to parse Smalltalk code and generate AST and IR if the Smalltalk code changes. Therefore, these steps are performed only once when a layer is inlined for the first time, but never again afterwards.
 
 \section{PROFILING SMALLTALK METHODS}
 Talk about the Smalltalk method profiler.
@@ -166,5 +205,8 @@ Talk about the Smalltalk method profiler.
 Talk about what still needs to be done.
 
 \section{CONCLUSION}
+
+\bibliography{contextamber}{}
+\bibliographystyle{plain}
 
 \end{document}
