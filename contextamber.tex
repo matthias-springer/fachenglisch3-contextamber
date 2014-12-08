@@ -79,7 +79,7 @@ Amber Smalltalk implements an object model that is similar to the Smalltalk-80 o
 
 \begin{figure}
 \centering
-\includegraphics[width=0.49\textwidth]{amber_class_model}
+\includegraphics[width=0.45\textwidth]{amber_class_model}
 \label{fig:amber_obj}
 \caption{Part of Amber's object model as seen from the JavaScript side. Inheritance arrows designate prototype chains. An association arrow between object \texttt{a} and object \texttt{b} means that \texttt{a.klass = b}.}
 \end{figure}
@@ -167,6 +167,22 @@ layer composition & \texttt{(L1, L2)} \\
 \end{tabular}
 \end{table}
 
+\subsection{LAYER/PARTIAL CLASS CREATION}
+Layers and partial classes are classes defined through ContextAmber's API instead of the Smalltalk subclassing API. Partial classes are subclasses of \texttt{PartialClass} and contain a method \texttt{PartialClass class>>base} defining the base class. Layers are subclasses of \texttt{Layer} and contain a method \texttt{Layer class>>partialClasses} defining a collection of all partial classes. \texttt{Layer} instances have an ID which is unique among all layer instances of all layer classes. The layer ID is an inexpensive way of referencing layers, since Amber Smalltalk does not have the concept of an object ID. We use it to calculate the \emph{composition signature}, an integer value representing the current layer composition. The following listing shows the interface for defining layers and partial classes.
+
+\begin{table}[h]
+    \begin{tabular}{ll}
+        \texttt{ContextAmber} & \texttt{newPartialClass: \#PartialClassName} \\
+         & \texttt{baseClass: DemoClass} \\
+         & \texttt{package: 'ContextAmber-Tests'} \\
+       \\
+        \texttt{ContextAmber} & \texttt{newLayer: \#LayerName} \\
+        & \texttt{layerClasses: \{PartialClassName\}} \\
+        & \texttt{instanceVariableNames: ''} \\
+        & \texttt{package: 'ContextAmber-Tests'} 
+    \end{tabular}
+\end{table}
+
 \subsection{IMPLEMENTATION DETAILS}
 (this is a stub)
 
@@ -175,11 +191,14 @@ For a partial method, ContextAmber generates a wrapper (decorator) method replac
 
 The wrapper method retrieves the current layer composition and invokes the corresponding partial method of the layer on top of the stack. The layer at the bottom of the stack is always the base class.
 
+\paragraph{SYSTEM STARTUP}
+Amber Smalltalk is different from most Smalltalk implementations in a sense that the system state (image) cannot be saved and reloaded later. Amber Smalltalk bootstraps a minimal Smalltalk system and then loads all other classes. Only committed code (behavior) survives a reload, but not objects. Therefore, partial class to base class relationships and the per-layer collection of partial classes must be stored in methods instead of instance variables. Furthermore, ContextAmber has to reinstall all wrapper methods on startup.
+
 \section{OPTIMIZATIONS}
 In this section, we present optimizations which speed up ContextAmber.
 
 \subsection{ASSUMPTIONS}
-Most of the otpimizations presented in this section are based on the assumption that method invocations are much more frequent than changes of the layer composition. Therefore, we try to speed up the execution of layered methods at the cost of reduced performance for layer composition changes.
+Most of the optimizations presented in this section are based on the assumption that method invocations are much more frequent than the layer composition changes~\cite{10.1109/C5.2012.20}. Therefore, we try to speed up the execution of layered methods at the cost of reduced performance for layer composition changes.
 
 \subsection{INLINING PROCEED CALLS}
 Layer compositions with a high number of layers and \texttt{proceed} calls slow down method execution, because every \texttt{proceed} call is an additional message send and requires finding the next layer from the stack of active layers. We speed up this process by replacing message sends of \texttt{proceed} selectors with the list of instructions of the corresponding partial method for the next layer in the IR tree.
@@ -196,7 +215,14 @@ ContextAmber adds another IR visitor to Amber's existing compiler infrastructure
 \subsection{CACHING PARTIAL METHOD IR}
 Whenever \texttt{IRProceedInliner} inlines partial methods, it parses the Smalltalk code and generates an AST and IR for all layers in the current layer composition. However, in many cases only the upper part of the layer composition stack changes. Therefore, it is sufficient to recompile partial methods beginning with the layer that changed.
 
-In addition, we cache the unoptimized IR (i.e., without \texttt{proceed} inlining) for all partial methods, such that we only have to parse Smalltalk code and generate AST and IR if the Smalltalk code changes. Therefore, these steps are performed only once when a layer is inlined for the first time, but never again afterwards.
+In addition, we cache unoptimized IRs (i.e., without \texttt{proceed} inlining), such that we only have to parse Smalltalk code and generate AST and IR if the Smalltalk code changes. ContextAmber hooks into the Smalltalk compiler and stores the unoptimized IR in a JavaScript instance variable of the corresponding class object\footnote{This behavior is encapsulated in a layer, utilizing our framework.}. We store the IR tree in two cases.
+
+\begin{itemize}
+    \item The method is a partial method (i.e., it is part of a partial class).
+    \item A partial method exists for the method being compiled (i.e., a partial class exists for the method's class, and that class has an implementation for the method's selector).
+\end{itemize}
+
+For the second case, ContextAmber has to go through all partial classes for a given class. Therefore, we store references to all partial classes in every base class. This collection of partial classes is updated when a partial class is added (subclassing \texttt{PartialClass}) and when a partial class is removed (utilizing a \texttt{SystemAnnouncer} callback).
 
 \section{PROFILING SMALLTALK METHODS}
 Talk about the Smalltalk method profiler.
