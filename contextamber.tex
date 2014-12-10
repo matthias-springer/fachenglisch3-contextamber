@@ -275,6 +275,19 @@ Figure~\ref{fig:inlining-example} illustrates ContextAmber's data structure for 
 \end{figure}
 
 In our example, \texttt{Point>>x} is inlined object-wide, whereas \texttt{Point>>y} is inlined class-wide, since in this example we assume that the behavior of the former method changes quite often due to object-wide layer composition changes, whereas the latter method changes infrequently. Calling \texttt{p2.x()} causes reinlining \texttt{p2}'s method because its version number is outdated (i.e., a global or scoped layer affecting \texttt{Point>>x} was activated or deactivated). Calling \texttt{p3.x()} causes reinlining \texttt{p3}'s method because it is marked dirty (i.e., a layer affecting \texttt{p3.x} was activated or deactivated). Calling \texttt{p1.x()} or any \texttt{y()} method does not cause any reinlining because these methods are not outdated.
+
+\subsection{LAYER COMPOSITION SIGNATURES}
+For class-wide wrappers with method dictionaries, we used the layer composition as a key into the method dictionary. Since comparing arrays of Smalltalk objects is slow, we would like to represent layer compositions by a unique integer number. A slightly modified version of this approach can also be used to replace the version number that is used for inlined method invalidation. A layer signature function is a bijective mapping from a variable-sized list of layers to an integer number. Layers have a unique ID which is created when a layer object is created.
+
+The signature of a layer composition $C = (L_1, L_2, \dots, L_n)$ is the encoding of the IDs of all layer in $C$ using Cantor's tuple function.
+
+$$\mathit{sig}((L_1, L_2, \ldots, L_n)) = \pi^{(n + 1)}(\mathit{id}(L_1), \mathit{id}(L_2), \ldots, \mathit{id}(L_n), n) $$
+$$= \pi(\pi(\pi(\ldots, \mathit{id}(L_{n-1})), \mathit{id}(L_n)), n)$$
+
+Recall that Cantor's tuple function $\pi$ is defined as follows.
+
+$$\pi(k_1, k_2) = \frac{1}{2}(k_1+k_2)(k_1+k_2+1)+k_2$$
+
 \section{PROFILING SMALLTALK METHODS}
 Talk about the Smalltalk method profiler.
 
