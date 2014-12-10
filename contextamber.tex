@@ -191,7 +191,7 @@ For a partial method, ContextAmber generates a wrapper (decorator) method replac
 
 The wrapper method retrieves the current layer composition and invokes the corresponding partial method of the layer on top of the stack. The layer at the bottom of the stack is always the base class.
 
-\paragraph{SYSTEM STARTUP}
+\paragraph{System Startup}
 Amber Smalltalk is different from most Smalltalk implementations in a sense that the system state (image) cannot be saved and reloaded later. Amber Smalltalk bootstraps a minimal Smalltalk system and then loads all other classes. Only committed code (behavior) survives a reload, but not objects. Therefore, partial class to base class relationships and the per-layer collection of partial classes must be stored in methods instead of instance variables. Furthermore, ContextAmber has to reinstall all wrapper methods on startup.
 
 \section{OPTIMIZATIONS}
@@ -224,6 +224,57 @@ In addition, we cache unoptimized IRs (i.e., without \texttt{proceed} inlining),
 
 For the second case, ContextAmber has to go through all partial classes for a given class. Therefore, we store references to all partial classes in every base class. This collection of partial classes is updated when a partial class is added (subclassing \texttt{PartialClass}) and when a partial class is removed (utilizing a \texttt{SystemAnnouncer} callback).
 
+\subsection{OBJECT-WISE METHOD INLINING}
+When we inline proceed calls, we try to speed up the execution of layered methods by making the assumption that the layer composition is stable throughout a number of method invocations. At some point, the layer composition might change and inlined methods become invalid. We have to analyze the new layer composition and create a new inlined method. This is easy for global and scoped layers, because we can simply replace an instance method by its inlined version. For object-wise layer activation, we can have different layer compositions for objects of the same class and, therefore, different inlined methods. In the following paragraphs, we discuss several ideas for object-wise proceed inlining.
+
+As a running example, consider that we have two objects \texttt{p1} and \texttt{p2}, both instances of \texttt{Point}. For \texttt{p1}, we activate \texttt{MetricLayer} which replaces the methods \texttt{x()} and \texttt{y()}, returning coordinates in the metric system. For \texttt{p2}, we activate \texttt{ImperialLayer} which replaces the same methods, returning coordinates in the imperial system. For every idea, we consider running \texttt{p1.x()}, \texttt{p2.x()}, \texttt{p1.x()} in that sequence.
+
+\paragraph{Class-wide Method Inlining}
+Inlined methods replace instance methods on the class level. When we run \texttt{p1.x()} for the first time, we replace \texttt{Point>>x} by an inlined method for \texttt{MetricLayer}. When we run \texttt{p2.x()}, we replace \texttt{Point>>x} by an inlined method for \texttt{ImperialLayer} because the layer composition is different now. Running \texttt{p1.x()} again replaces the method with the previous inlined method again.
+
+\paragraph{Object-wide Method Inlining}
+Inlined methods are stored on the object level. When we run \texttt{p1.x()} for the first time, we store the inlined method as \texttt{p1['\_x']} directly\footnote{Written in JavaScript notation since there is no Smalltalk notation for this.}. Respectively, we store inlined methods for \texttt{p2} as properties on \texttt{p2} directly. Running \texttt{p1.x()} again does not replace any methods, because the layer composition for \texttt{p1} did not change.
+
+\paragraph{Class-wide Wrappers with Method Dictionaries}
+A dictionary stores inlined methods, with one dictionary per base method. Every layered method is replaced by a wrapper method which calls retrieves the inlined method from the dictionary with the layer composition as the key, or creates and stores the inlined method in the dictionary if it does not exist. Let \texttt{l1} be the layer composition for \texttt{p1}, \texttt{l2} be the layer composition for \texttt{p2}, and \texttt{dictx} be the method dictionary for \texttt{Point>>x}. When we run \texttt{p1.x()} for the first time, we store the inlined method as \texttt{dictx[l1]} and call it. When we call the method on \texttt{p2}, we store it as \texttt{dictx[l2]}, respectively. Calling \texttt{p1.x()} again simply retrieves the method from \texttt{dictx} and calls it.
+
+\paragraph{Cached Class-wide Method Inlining}
+This is a combination of class-wide method inlining and method dictionaries, where inlined methods are cached in a method dictionary instead of reinlining them every time a method is replaced.
+
+\paragraph{Cached Object-wide Method Inlining}
+This is a combination of object-wide method inlining and method dictionaries, where inlined methods are cached in a method dictionary instead of reinlining them every time a method is replaced.
+
+\paragraph{Hybrid Approach}
+This variant combines multiple approaches and switches between them heuristically. For example, an implementation could use object-wide method inlining and switch to class-wide method inlining for a sepecific class at runtime, if a lot of instances of that class are created.
+
+\subsection{INVALIDATING INLINED METHODS}
+If the layer composition changes, we might have to throw away inlined methods and generate new ones. In this subsection, we discuss at what time a method could be reinlined.
+
+\paragraph{On Layer Composition Change}
+Every time we activate or deactivate a layer, we reinline all inlined methods for all partial methods associated with the layer (i.e., layer $\rightarrow$ partial classes $\rightarrow$ partial methods). Initially, all base methods for which partial methods exist, are replaced with dummy methods which replace itself with their inlined version on their first invocation. This ensures that we do not reinline inlined methods for methods which exist but are never invoked. 
+
+Note, that for object-wide method inlining, a partial class has to know all of its base class' instances (recall that inlined methods are stored in the object itself), which could be a large number and cause memory leaks. 
+
+\paragraph{On Method Invocation}
+Every inlined method stores the layer composition for which it was created and checks if its layer composition is the same as the current layer composition for the object when it is invoked. Note, that every time we call an inlined method, we have to recalculate the stack of active layers for the object.
+
+\paragraph{On Method Invocation with Dirty Flag}
+Every inlined method stores a dirty flag indicating if the inlined method is up to date with respect to the current layer composition. The dirty flag is set whenever the layer composition changes in the same way as we reinline methods on layer composition change. Note, that for object-wide method inlining, a partial class has to know all of its base class' instances, in order to set the dirty bit on their methods.
+
+\paragraph{On Method Invocation with Dirty Flag and Versions}
+This is an optimization of the previous approach which does not require partial classes to have references to all of its base class' instances for object-wide method inlining. Every inlined method stores a dirty flag indicating if it is up to date with respect to the object's layer composition (i.e., the dirty flag is set whenever a layer is activated or deactivated for the object the method belongs to). Whenever the global or scoped layer composition stack changes, all dirty bits remain unchanged. In addition to the dirty bit, every inlined method stores a single version number for the global and scoped layer composition stack. Every time the global or scoped layer composition stack changes, a global version number is incremented. Inlined methods check the dirty bit and compare their version number. If either one of them indicates that the method is out of date, it is reinlined.
+
+\paragraph{Example}
+Figure~\ref{fig:inlining-example} illustrates ContextAmber's data structure for invalidating inlined methods. ContextAmber supports cached class-wide and object-wide method inlining, and invalidates inlined methods on method invocation with dirty flag and optionally with a version number. Method execution statistics and heuristics decide when ContextAmber switches between these variants.
+
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=0.45\textwidth]{inlining_example.pdf}
+    \label{fig:inlining-example}
+    \caption{ContextAmber's data structure for invalidating inlined methods}
+\end{figure}
+
+In our example, \texttt{Point>>x} is inlined object-wide, whereas \texttt{Point>>y} is inlined class-wide, since in this example we assume that the behavior of the former method changes quite often due to object-wide layer composition changes, whereas the latter method changes infrequently. Calling \texttt{p2.x()} causes reinlining \texttt{p2}'s method because its version number is outdated (i.e., a global or scoped layer affecting \texttt{Point>>x} was activated or deactivated). Calling \texttt{p3.x()} causes reinlining \texttt{p3}'s method because it is marked dirty (i.e., a layer affecting \texttt{p3.x} was activated or deactivated). Calling \texttt{p1.x()} or any \texttt{y()} method does not cause any reinlining because these methods are not outdated.
 \section{PROFILING SMALLTALK METHODS}
 Talk about the Smalltalk method profiler.
 
